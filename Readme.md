@@ -33,7 +33,7 @@ Each microservice (Auth, Orders, Payments) runs in its own container and is auto
 ## ⚙️ How to Use
 
 ### 1️⃣ Clone the Repository
-git clone https://github.com/<your-username>/
+git clone https://github.com/aditirajput18/EKS-Microservices.git
 
 k8s-microservices-eks.git
 

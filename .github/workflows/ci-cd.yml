@@ -1,0 +1,63 @@
+name: CI/CD - Build, Push & Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: ecr-login
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and push auth image
+      run: |
+        cd services/auth
+        docker build -t auth-service:latest .
+        docker tag auth-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
+
+    - name: Build and push orders image
+      run: |
+        cd services/orders
+        docker build -t orders-service:latest .
+        docker tag orders-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/orders-service:latest
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/orders-service:latest
+
+    - name: Build and push payments image
+      run: |
+        cd services/payments
+        docker build -t payments-service:latest .
+        docker tag payments-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/payments-service:latest
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/payments-service:latest
+
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to EKS
+      run: |
+        kubectl apply -f k8s/base/namespace.yaml
+        kubectl apply -f k8s/base/auth-deployment.yaml
+        kubectl apply -f k8s/base/auth-service.yaml
+        kubectl apply -f k8s/base/orders-deployment.yaml
+        kubectl apply -f k8s/base/orders-service.yaml
+        kubectl apply -f k8s/base/payments-deployment.yaml
+        kubectl apply -f k8s/base/payments-service.yaml
+        kubectl apply -f k8s/base/hpa-auth.yaml

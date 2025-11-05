@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+.terraform.lock.hcl
+*.log
+*.tar.gz
+/dist
+/build
+/.vscode/
+.DS_Store
